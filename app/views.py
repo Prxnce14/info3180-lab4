@@ -6,6 +6,7 @@ from werkzeug.utils import secure_filename
 from werkzeug.security import check_password_hash
 from app.models import UserProfile
 from app.forms import LoginForm, UploadForm
+from is_safe_url import is_safe_url
 
 
 ###
@@ -57,10 +58,15 @@ def login():
     # change this to actually validate the entire form submission
     # and not just one field
     if request.method == 'POST':
+        # if current_user.is_authenticated:
+        # # if user is already logged in, just redirect them to our secure page
+        # # or some other page like a dashboard
+        #     return redirect(url_for('upload'))
+        
         if form.validate_on_submit():
             # Get the username and password values from the form.
-            uname = form.username.data
-            passw = form.password.data
+            username = form.username.data
+            password = form.password.data
 
             # Using your model, query database for a user based on the username
             # and password submitted. Remember you need to compare the password hash.
@@ -68,24 +74,39 @@ def login():
             # Then store the result of that query to a `user` variable so it can be
             # passed to the login_user() method below.
     
-            user = db.session.execute(db.select(UserProfile).filter_by(username=uname)).scalar()
+            user = db.session.execute(db.select(UserProfile).filter_by(username=username)).scalar()
 
-            if user is not None and check_password_hash(user.password, passw):
+            if user is not None and check_password_hash(user.password, password):
                 remember_me = False
 
-            if 'remember_me' in request.form:
-                remember_me = True
+                if 'remember_me' in request.form:
+                    remember_me = True
 
-            # If the user is not blank, meaning if a user was actually found,
-            # then login the user and create the user session.
-            # user should be an instance of your `UserProfile` class
-            # Gets user id, load into session
-            login_user(user, remember=remember_me)
+                # If the user is not blank, meaning if a user was actually found,
+                # then login the user and create the user session.
+                # user should be an instance of your `UserProfile` class
+                # Gets user id, load into session
+                # login_user(user)
+                login_user(user, remember=remember_me)
 
-            # Remember to flash a message to the user
-            flash('Logged in successfully.', 'success')
+                # Remember to flash a message to the user
+                flash('Logged in successfully.', 'success')
 
-            return redirect(url_for('upload'))  # The user should be redirected to the upload form instead
+                # next_page = request.args.get('next')
+
+
+                # is_safe_url should check if the url is safe
+                # for use in redirects, meaning it matches the request host.
+                # if not is_safe_url(next_page, request.host):
+                #     return abort(400)
+                # else:
+                    # return redirect(next_page or url_for('upload')) # The user should be redirected to the upload form instead
+                return redirect(url_for('upload'))
+                    
+            else:
+                flash('Username or Password is incorrect.', 'danger')
+        flash_errors(form)
+            
     return render_template('login.html', form=form)
 
 # user_loader callback. This callback is used to reload the user object from
